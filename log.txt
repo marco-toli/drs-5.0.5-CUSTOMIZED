@@ -1,0 +1,2 @@
+g++ -g -O2 -Wall -Wuninitialized -fno-strict-aliasing -Iinclude -I/usr/local/include -DOS_LINUX -DHAVE_USB -DHAVE_LIBUSB10 -DUSE_DRS_MUTEX -c src/drs_reading.cpp
+Makefile:81: recipe for target 'drs_reading.o' failed
