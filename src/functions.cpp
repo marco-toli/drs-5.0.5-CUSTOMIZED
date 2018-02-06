@@ -295,10 +295,33 @@ std::pair<std::pair<float,std::pair<float,float> >,float> GetAmplitudeIntegral(f
 
 
 
-std::pair<float,float> GetAmplitudeSquare(float* vals, const unsigned int& s1, const unsigned int& s2, const unsigned int& sMin, const unsigned int& nS, const bool& isNegative)
+std::pair<float,float> GetAmplitudeSquare(float* vals, const unsigned int& s1, const unsigned int& s2, const float& SqTH, const unsigned int& nS, const bool& isNegative)
 {
   float ped = GetPedestal(vals,s1,s2);
+  float threshold = SqTH*1000;
+  int sMin = 0;
+  
+//   threshold = 100;
+  
+  for(unsigned int sIt = 0; sIt < 1024; ++sIt)
+  {
+     if( isNegative )
+     {
+//        std::cout << "vals = " << vals[sIt] << " :: ped = "  << ped << " :: threshold = " << threshold << std::endl;
+       if( fabs(vals[sIt]-ped) > threshold )
+       {
+         sMin = sIt;         
+         break;
+       }
+     }
+  }
+  
+  sMin+=4;
+  
+  
+  
   float amp = GetPedestal(vals,sMin,sMin+nS);
+  std::cout << "sMin = " << sMin << " :: amp = " << amp << std::endl;
   
   std::pair<float,float> ret(ped,fabs(amp-ped));
   return ret;
@@ -356,7 +379,7 @@ std::pair<std::pair<float,float>,std::pair<TF1*,TF1*> > GetTimeTh(float* vals, c
        }
      }
    }
-   std::cout << "sBef1 = " << sBef1 << " :: sBef2 = " << sBef2 << std::endl;
+//    std::cout << "sBef1 = " << sBef1 << " :: sBef2 = " << sBef2 << std::endl;
   
   std::pair<float,float> ret1(0,0);
   std::pair<TF1*,TF1*> ret2(NULL,NULL);
@@ -411,6 +434,39 @@ std::pair<std::pair<float,float>,std::pair<TF1*,TF1*> > GetTimeTh(float* vals, c
   
   return ret;
 }
+
+std::vector <int>  GetSpikes(float* vals, const float& spikeAmp)
+{
+    
+    float ped = GetPedestal(vals,10,100);
+    int spikeId = 0;
+    std::vector<int> spikeIt;    
+    std::vector<float> spikeMax;
+//     std::cout << "start spikes hunting --> spikeAmp = " << spikeAmp << " :: ped = " << ped << std::endl;
+  
+    for(unsigned int sIt = 0; sIt < nS; ++sIt)
+    {
+//         std::cout << "sIt = " << sIt << " :: vals = " << vals[sIt] << std::endl;
+        
+        if( vals[sIt] > (ped + spikeAmp*0.5*4000)  || vals[sIt] < (ped - spikeAmp*0.5*4000)  )
+        {
+            
+            spikeIt.push_back(sIt);
+            spikeMax.push_back(vals[sIt]-ped);
+            std::cout << " spikeId = " << spikeId << " :: spikeIt = " << spikeIt.at(spikeId) << " :: spikeMax = " << spikeMax.at(spikeId) << std::endl;
+            
+            spikeId++;
+
+        }
+    }
+
+    
+  
+    // return the number of spikes found and their position
+//     std::vector <int> ret(spikeId,spikeIt);
+    return spikeIt;
+}
+
 
 
 /*
