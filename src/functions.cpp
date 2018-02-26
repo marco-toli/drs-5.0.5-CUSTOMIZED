@@ -305,7 +305,7 @@ std::pair<float,float> GetAmplitudeSquare(float* vals, const unsigned int& s1, c
   
   for(unsigned int sIt = 0; sIt < 1024; ++sIt)
   {
-     if( isNegative )
+     if( isNegative)
      {
 //        std::cout << "vals = " << vals[sIt] << " :: ped = "  << ped << " :: threshold = " << threshold << std::endl;
        if( fabs(vals[sIt]-ped) > threshold )
@@ -316,12 +316,12 @@ std::pair<float,float> GetAmplitudeSquare(float* vals, const unsigned int& s1, c
      }
   }
   
-  sMin+=4;
+  sMin+=10;
   
   
   
   float amp = GetPedestal(vals,sMin,sMin+nS);
-  std::cout << "sMin = " << sMin << " :: amp = " << amp << std::endl;
+  //std::cout << "sMin = " << sMin << " :: amp = " << amp << std::endl;
   
   std::pair<float,float> ret(ped,fabs(amp-ped));
   return ret;
@@ -389,7 +389,12 @@ std::pair<std::pair<float,float>,std::pair<TF1*,TF1*> > GetTimeTh(float* vals, c
   if( sBef1 > 0 )
   {
     TGraph* g = PointsAroundTh(vals,sBef1,nSBef,nSAft);
+    g -> SetMarkerColor(kBlue+1);
+    g -> SetMarkerStyle(21);
+    g -> GetXaxis()->SetLimits(0,1024);
+    g -> GetYaxis()->SetLimits(0,1);
     g -> Fit("pol1","Q");
+    //g -> Draw("ALPE");
     
     TF1* fitFunc = (TF1*)( g->GetFunction("pol1") );
     fitFunc -> SetLineColor(kMagenta);
@@ -434,6 +439,118 @@ std::pair<std::pair<float,float>,std::pair<TF1*,TF1*> > GetTimeTh(float* vals, c
   
   return ret;
 }
+
+std::pair<std::pair<float,float>,std::pair<TF1*,TF1*> > GetTimeThWeighed(float* vals, float* times, const unsigned int& s1, const float& ped, const float& amp,
+                                                                  const float& th, const unsigned int& nSBef, const unsigned int& nSAft,
+                                                                  const bool& isFraction, const bool& isNegative, const bool& deleteFit)
+{
+  float threshold = th;
+  if( isFraction )
+    threshold = amp * th;
+  
+  unsigned int sBef1 = 0;
+  unsigned int sBef2 = 0;
+  for(unsigned int sIt1 = s1; sIt1 < nS; ++sIt1)
+  {
+     if( isNegative )
+     {
+       if( vals[sIt1] < (ped-threshold) )
+       {
+         sBef1 = std::max(0,int(sIt1-1));
+         
+         for(unsigned int sIt2 = sIt1; sIt2 < nS; ++sIt2)
+         {
+           if( vals[sIt2] > (ped-threshold) )
+           {
+             sBef2 = sIt2 - 1;
+             break;
+           }
+         }
+         
+         break;
+       }
+     }
+     
+     else
+     {
+       if( vals[sIt1] > (ped+threshold) )
+       {
+         sBef1 = std::max(0,int(sIt1-1));
+         
+         for(unsigned int sIt2 = sIt1; sIt2 < nS; ++sIt2)
+         {
+           if( vals[sIt2] < (ped+threshold) )
+           {
+             sBef2 = sIt2 - 1;
+             break;
+           }
+         }
+         
+         break;
+       }
+     }
+   }
+//    std::cout << "sBef1 = " << sBef1 << " :: sBef2 = " << sBef2 << std::endl;
+  
+  std::pair<float,float> ret1(0,0);
+  std::pair<TF1*,TF1*> ret2(NULL,NULL);
+  std::pair<std::pair<float,float>,std::pair<TF1*,TF1*> > ret(ret1,ret2);
+  
+  
+  if( sBef1 > 0 )
+  {
+    TGraph* g = PointsAroundThWeighed(vals,times,sBef1,nSBef,nSAft);
+    g -> SetMarkerColor(kBlue+1);
+    g -> SetMarkerStyle(21);
+    g -> GetXaxis()->SetLimits(0,1024);
+    g -> GetYaxis()->SetLimits(0,1);
+    g -> Fit("pol1","Q");
+    //g -> Draw("ALPE");
+    
+    TF1* fitFunc = (TF1*)( g->GetFunction("pol1") );
+    fitFunc -> SetLineColor(kMagenta);
+    fitFunc -> SetLineWidth(1);
+    
+    float time = -1.;
+    if( isNegative ) time = ( (ped-threshold) - fitFunc->GetParameter(0) ) / fitFunc->GetParameter(1);
+    else             time = ( (ped+threshold) - fitFunc->GetParameter(0) ) / fitFunc->GetParameter(1);
+    
+    ret.first.first = time;
+    ret.second.first = fitFunc;
+    
+    if( deleteFit )
+    {
+      delete fitFunc;
+      delete g;
+    }
+  }
+  
+  if( sBef2 > 0 )
+  {
+    TGraph* g = PointsAroundThWeighed(vals,times,sBef2,nSAft,nSBef);
+    g -> Fit("pol1","Q");
+    
+    TF1* fitFunc = (TF1*)( g->GetFunction("pol1") );
+    fitFunc -> SetLineColor(kMagenta);
+    fitFunc -> SetLineWidth(1);
+    
+    float time = -1.;
+    if( isNegative ) time = ( (ped-threshold) - fitFunc->GetParameter(0) ) / fitFunc->GetParameter(1);
+    else             time = ( (ped+threshold) - fitFunc->GetParameter(0) ) / fitFunc->GetParameter(1);
+    
+    ret.first.second = time;
+    ret.second.second = fitFunc;
+    
+    if( deleteFit )
+    {
+      delete fitFunc;
+      delete g;
+    }
+  }
+  
+  return ret;
+}
+
 
 std::vector <int>  GetSpikes(float* vals, const float& spikeAmp)
 {
@@ -520,7 +637,6 @@ std::pair<std::pair<float,float>,TF1*> GetTimeTemplateFit(float* vals, const TPr
 }
 */
 
-
 TGraph* PointsAroundTh(float* vals, const unsigned int& sBef, const unsigned int& nSBef, const unsigned int& nSAft)
 {
   // n-point interpolation: nSBef points before threshold, BSAft points after threshold
@@ -541,6 +657,28 @@ TGraph* PointsAroundTh(float* vals, const unsigned int& sBef, const unsigned int
     float time = sample * 1. / GS_s;
     
     g -> SetPoint(point,time,vals[sample]);
+    ++point;
+  }
+  
+  return g;
+}
+
+TGraph* PointsAroundThWeighed(float* vals, float* times, const unsigned int& sBef, const unsigned int& nSBef, const unsigned int& nSAft)
+{
+  // n-point interpolation: nSBef points before threshold, BSAft points after threshold
+  TGraph* g = new TGraph();
+
+  int point = 0;
+  for(unsigned int iS = 0; iS < nSBef; ++iS)
+  {
+    unsigned int sample = sBef - (nSBef-iS-1);
+    g -> SetPoint(point,times[sample],vals[sample]);
+    ++point;
+  }
+  for(unsigned int iS = 0; iS < nSAft; ++iS)
+  {
+    unsigned int sample = sBef + 1 +iS;
+    g -> SetPoint(point,times[sample],vals[sample]);
     ++point;
   }
   
