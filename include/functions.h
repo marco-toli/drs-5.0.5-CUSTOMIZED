@@ -32,10 +32,15 @@ std::pair<float,float> GetAmplitudeSquare(float* vals, const unsigned int& s1, c
 std::pair<std::pair<float,float>,std::pair<TF1*,TF1*> > GetTimeTh(float* vals, const unsigned int& s1, const float& ped, const float& amp,
                                                                   const float& th, const unsigned int& nSBef, const unsigned int& nSAft,
                                                                   const bool& isFraction, const bool& isNegative, const bool& deleteFit = true);
+
+std::pair<std::pair<float,float>,std::pair<TF1*,TF1*> > GetTimeThWeighed(float* vals, float* times, const unsigned int& s1, const float& ped, const float& amp,
+                                                                  const float& th, const unsigned int& nSBef, const unsigned int& nSAft,
+                                                                  const bool& isFraction, const bool& isNegative, const bool& deleteFit = true);
 // std::pair<std::pair<float,float>,TF1*> GetTimeTemplateFit(float* vals, const TProfile* p_template, const float& ped, const bool& draw = false);
 
 std::vector <int> GetSpikes(float* vals, const float& spikeAmp);
 
 TGraph* PointsAroundTh(float* vals, const unsigned int& sBef, const unsigned int& nSBef, const unsigned int& nSAft);
+TGraph* PointsAroundThWeighed(float* vals, float* times, const unsigned int& sBef, const unsigned int& nSBef, const unsigned int& nSAft);
 
 #endif
